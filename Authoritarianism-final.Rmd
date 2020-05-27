@@ -1,0 +1,165 @@
+---
+title: "Authoritarianism-final"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(readxl)
+library(janitor)
+library(scales)
+library(cowplot)
+library(tidyverse)
+```
+
+
+```{r read in data, include=FALSE}
+
+wbdata2 <- read_csv("WB data2.csv", col_types= cols(.default = col_character()))
+
+# read in world bank data 
+
+pts <-read_excel("PTS-2019.xlsx")
+
+# read in political terror scale data 
+```
+
+```{r manipulate data, inlude = FALSE}
+
+wbturk2 <- wbdata2 %>% 
+  pivot_longer(`1991`:`2007`, names_to = "Year", values_to = "Value") %>% 
+  
+  # pivot data so that years and values are columns 
+  
+  clean_names() %>% 
+  mutate(value = as.numeric(value)) %>% 
+  mutate(year = as.numeric(year)) %>% 
+  
+  # clean names up and save them as numerica values 
+  
+  mutate("indicator_code" = series_code) %>% 
+  mutate("indicator_name" = series_name) %>% 
+  
+  # rename series_code and series_name as indidcator_code and indicator_name
+  # this is just to help me remember what these columns actually are 
+  
+  select(indicator_code, indicator_name, year, value) %>% 
+  
+  # select columns of interest 
+  
+  filter(indicator_name == "GDP (constant 2010 US$)")
+
+  # filter for the indicator I am interested in 
+
+pts2 <- pts %>% 
+  filter(Country == "Turkmenistan") %>% 
+  
+  # filter for country of interest 
+  
+  mutate(PTS_S = as.numeric(PTS_S)) %>%
+  mutate(Year = as.numeric(Year)) %>% 
+  
+  # change PTS_S and year to numeric values so that I can graph them 
+  
+  filter(Year >= 1991) %>% 
+  filter(Year <= 2007) %>%  
+  
+  # filter for years of interest 
+  
+  select(Year, PTS_S)
+
+  # select relevant columns 
+
+pts3 <- pts %>% 
+  filter(Country == "Turkmenistan") %>% 
+  mutate(PTS_S = as.numeric(PTS_S)) %>% 
+  mutate(Year = as.numeric(Year)) %>% 
+  filter(Year >= 1991) %>% 
+  select(Year, PTS_S)
+
+  # repeate same manipulations as above, selecting for a different time period 
+
+data <- wbturk2 %>%
+  right_join(pts2, by = c("year" = "Year")) %>% 
+  
+  # join pts2 data and wbturk2 data 
+  
+  pivot_longer(value:PTS_S, names_to = "indicator", values_to = "value") %>% 
+  
+  # pivot longer to get values from both datasets in the same column. This will
+  # help with facet wrapping when I graph 
+  
+  mutate(indicator = if_else(indicator == "value", "GDP", "PTS_S")) %>% 
+  
+  # rename "value" to "year" in the indicator column
+  
+  select(year:value)
+
+  # select relevant columns 
+```
+
+
+```{r graph, echo = FALSE}
+
+GDP_graph <- ggplot(wbturk2) +
+  
+  # create graph with economic data, save it as an object 
+  
+  geom_line(aes(x = year, y = value)) +
+  
+  # set x axis to year, y axis to value 
+  
+  geom_vline(xintercept = 1997, linetype = "dotted")+
+  
+  # create a dotted vertical line. This will help emphasize a 
+  # a specifc year of interest on the graph 
+  
+  scale_y_continuous(labels = number_format(scale = 0.000000001))+
+  
+  # scale axis so that numbers are readable 
+  
+  labs(y = "GDP 
+       (in billions of constant 2010 USD)", 
+       x = "Year", 
+       title = "Economic Performance", 
+       caption = "Source: World Bank World Development Indicators") + 
+  
+  # add labels 
+  
+  theme(plot.title = element_text(hjust = 0.5))
+
+  # center title 
+
+PTS <- 
+  ggplot(pts2)+
+  geom_line(aes(x=Year, y = PTS_S))+
+  geom_vline(xintercept = 1997, linetype = "dotted")+
+  scale_y_continuous(limits = c(1,5))+
+  labs(y = "PTS ranking",
+       x = "Year",
+       title = "Repression level", 
+       caption = "Source: Political Terror Scale")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+PTS2 <- 
+  ggplot(pts2)+
+  geom_line(aes(x=Year, y = PTS_S))+
+  scale_y_continuous(limits = c(1,5))+
+  labs(y = "PTS ranking",
+       x = "Year",
+       title = "Turkmenistan's Repression level, 1991-2996", 
+       caption = "Source: Political Terror Scale, State Department Scores")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+GDP_PTS <- plot_grid(GDP_graph, PTS)
+
+png("PTS.png")
+PTS2
+dev.off()
+
+png("GDP-PTS.png", res = 120, height = 410, width = 700)
+GDP_PTS
+dev.off()
+```
+
+
