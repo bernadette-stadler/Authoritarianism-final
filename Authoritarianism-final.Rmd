@@ -70,32 +70,6 @@ pts2 <- pts %>%
 
   # select relevant columns 
 
-pts3 <- pts %>% 
-  filter(Country == "Turkmenistan") %>% 
-  mutate(PTS_S = as.numeric(PTS_S)) %>% 
-  mutate(Year = as.numeric(Year)) %>% 
-  filter(Year >= 1991) %>% 
-  select(Year, PTS_S)
-
-  # repeate same manipulations as above, selecting for a different time period 
-
-data <- wbturk2 %>%
-  right_join(pts2, by = c("year" = "Year")) %>% 
-  
-  # join pts2 data and wbturk2 data 
-  
-  pivot_longer(value:PTS_S, names_to = "indicator", values_to = "value") %>% 
-  
-  # pivot longer to get values from both datasets in the same column. This will
-  # help with facet wrapping when I graph 
-  
-  mutate(indicator = if_else(indicator == "value", "GDP", "PTS_S")) %>% 
-  
-  # rename "value" to "year" in the indicator column
-  
-  select(year:value)
-
-  # select relevant columns 
 ```
 
 
@@ -130,36 +104,42 @@ GDP_graph <- ggplot(wbturk2) +
 
   # center title 
 
-PTS <- 
-  ggplot(pts2)+
+PTS <- ggplot(pts2)+
+  
+  # make a graph with the poltical terror scale data 
+  
   geom_line(aes(x=Year, y = PTS_S))+
+  
+  # x axis is year, y is rating 
+  
   geom_vline(xintercept = 1997, linetype = "dotted")+
+  
+  # add vertical line, as on other graph 
+  
   scale_y_continuous(limits = c(1,5))+
+  
+  # set limits to y axis 
+  
   labs(y = "PTS ranking",
        x = "Year",
        title = "Repression level", 
        caption = "Source: Political Terror Scale")+
+  
+  # add labels 
+  
   theme(plot.title = element_text(hjust = 0.5))
-
-PTS2 <- 
-  ggplot(pts2)+
-  geom_line(aes(x=Year, y = PTS_S))+
-  scale_y_continuous(limits = c(1,5))+
-  labs(y = "PTS ranking",
-       x = "Year",
-       title = "Turkmenistan's Repression level, 1991-2996", 
-       caption = "Source: Political Terror Scale, State Department Scores")+
-  theme(plot.title = element_text(hjust = 0.5))
+  
+  # center title 
 
 GDP_PTS <- plot_grid(GDP_graph, PTS)
 
-png("PTS.png")
-PTS2
-dev.off()
+# use cowplot to set graphs side by side 
 
 png("GDP-PTS.png", res = 120, height = 410, width = 700)
 GDP_PTS
 dev.off()
+
+# save image
 ```
 
 
